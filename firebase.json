@@ -1,0 +1,37 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "easy-orders-18",
+          "appId": "1:522150981060:android:47a42ccc6393997fc58891",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "easy-orders-18",
+          "configurations": {
+            "android": "1:522150981060:android:47a42ccc6393997fc58891",
+            "ios": "1:522150981060:ios:57e629193bb598e9c58891",
+            "web": "1:522150981060:web:41182bffb084afe3c58891"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "522150981060",
+    "project_id": "easy-orders-18",
+    "storage_bucket": "easy-orders-18.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522150981060:android:47a42ccc6393997fc58891",
+        "android_client_info": {
+          "package_name": "com.example.easy_orders"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7mKPEpbqwet2Q2Sw31bnIcVqYpEHjqlE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
