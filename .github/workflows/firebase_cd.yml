@@ -11,10 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Set up Flutter 3.27
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          # Use the flutter-version input to specify the exact version
+          flutter-version: '3.27.0' # Use '3.27.0' or the specific patch version
+          channel: 'stable'        # Still specify the channel for context
 
       - name: Install dependencies
         run: flutter pub get
