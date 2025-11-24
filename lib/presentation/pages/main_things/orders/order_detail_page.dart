@@ -39,7 +39,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   final _partyNameController = TextEditingController();
   final _notesController = TextEditingController();
   final _searchController = TextEditingController();
-  String _searchQuery = '';
+  DateTime? _selectedOrderDate;
 
   // FAB Animation
   late AnimationController _fabController;
@@ -53,6 +53,10 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     _masterDataController.fetchMasterData();
     if (_order == null) {
       _fetchOrderFromFirebase();
+    }
+    // Initialize order date
+    if (_order != null) {
+      _selectedOrderDate = _order!.orderDate;
     }
 
     // Initialize FAB animation
@@ -71,6 +75,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     if (_order != null) {
       _partyNameController.text = _order!.partyName;
       _notesController.text = _order!.notes ?? '';
+      _selectedOrderDate = _order!.orderDate; // NEW
     }
   }
 
@@ -82,6 +87,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
         if (_order != null) {
           _partyNameController.text = _order!.partyName;
           _notesController.text = _order!.notes ?? '';
+          _selectedOrderDate = _order!.orderDate; // NEW
         }
       });
     } catch (e) {
@@ -485,13 +491,14 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   }
 
   Future<void> _updatePartyInfo() async {
-    if (_order == null) return;
+    if (_order == null || _selectedOrderDate == null) return;
 
     final updatedOrder = _order!.copyWith(
       partyName: _partyNameController.text.trim(),
       notes: _notesController.text.trim().isNotEmpty
           ? _notesController.text.trim()
           : null,
+      orderDate: _selectedOrderDate, // NEW: Include order date in update
     );
 
     final success = await _orderController.updateOrder(updatedOrder);
@@ -516,6 +523,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
       );
     }
   }
+
 
   Future<void> _updateItemStatus(int index, String newStatus) async {
     if (_order == null) return;
@@ -759,6 +767,38 @@ class _OrderDetailPageState extends State<OrderDetailPage>
         },
       ),
     );
+  }
+
+  // NEW: Method to select order date
+  Future<void> _selectOrderDate() async {
+    if (_selectedOrderDate == null) return;
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedOrderDate!,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primaryColor,
+              onPrimary: Colors.white,
+              surface: themeProvider.isDarkMode ? Colors.grey[900]! : Colors.white,
+              onSurface: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedOrderDate) {
+      setState(() {
+        _selectedOrderDate = picked;
+      });
+    }
   }
 
   @override
@@ -1038,14 +1078,12 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color:
-                      themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                  color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
               if (!_isEditingParty)
                 IconButton(
-                  icon: const Icon(Icons.edit_rounded,
-                      color: AppTheme.primaryColor),
+                  icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryColor),
                   onPressed: () {
                     setState(() {
                       _isEditingParty = true;
@@ -1069,6 +1107,66 @@ class _OrderDetailPageState extends State<OrderDetailPage>
               ),
             ),
             const SizedBox(height: 12),
+
+            // NEW: Order Date Picker in Edit Mode
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Order Date',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _selectOrderDate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: themeProvider.isDarkMode
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.black.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: themeProvider.isDarkMode
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.black.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          color: themeProvider.isDarkMode ? Colors.white54 : Colors.black54,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedOrderDate != null
+                                ? DateFormat('MMM dd, yyyy').format(_selectedOrderDate!)
+                                : 'Select date',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          color: themeProvider.isDarkMode ? Colors.white54 : Colors.black54,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
             TextField(
               controller: _notesController,
               maxLines: 3,
@@ -1092,13 +1190,13 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                         _isEditingParty = false;
                         _partyNameController.text = _order!.partyName;
                         _notesController.text = _order!.notes ?? '';
+                        _selectedOrderDate = _order!.orderDate; // Reset order date
                       });
                     },
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppTheme.errorColor),
                     ),
-                    child: const Text('Cancel',
-                        style: TextStyle(color: AppTheme.errorColor)),
+                    child: const Text('Cancel', style: TextStyle(color: AppTheme.errorColor)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1115,6 +1213,13 @@ class _OrderDetailPageState extends State<OrderDetailPage>
             ),
           ] else ...[
             _buildInfoRow('Party Name', _order!.partyName, themeProvider),
+            const SizedBox(height: 12),
+            // NEW: Show Order Date instead of Created At
+            _buildInfoRow(
+              'Order Date',
+              DateFormat('MMM dd, yyyy').format(_order!.orderDate),
+              themeProvider,
+            ),
             if (_order!.notes != null && _order!.notes!.isNotEmpty) ...[
               const SizedBox(height: 12),
               _buildInfoRow('Notes', _order!.notes!, themeProvider),
@@ -1364,17 +1469,29 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.print,
-                    color: AppTheme.primaryColor),
-                onPressed: () => _showItemPdfOptionsBottomSheet(item),
-                tooltip: 'Delete Item',
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_rounded,
-                    color: AppTheme.errorColor),
-                onPressed: () => _deleteItem(index),
-                tooltip: 'Delete Item',
+              // Action buttons row
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_rounded,
+                        color: AppTheme.accentColor),
+                    onPressed: () => _showEditItemDialog(index, item),
+                    tooltip: 'Edit Item',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.print,
+                        color: AppTheme.primaryColor),
+                    onPressed: () => _showItemPdfOptionsBottomSheet(item),
+                    tooltip: 'Print Item',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_rounded,
+                        color: AppTheme.errorColor),
+                    onPressed: () => _deleteItem(index),
+                    tooltip: 'Delete Item',
+                  ),
+                ],
               ),
             ],
           ),
@@ -1561,6 +1678,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
       ),
     );
   }
+
 
   Widget _buildPiecesInfo(
       String label, String value, Color color, ThemeProvider themeProvider) {
@@ -1897,6 +2015,22 @@ class _OrderDetailPageState extends State<OrderDetailPage>
       }
     }
   }
+  void _showEditItemDialog(int index, OrderItem item) {
+    _closeFabMenu();
+    showDialog(
+      context: context,
+      builder: (context) => _EditItemDialog(
+        orderId: widget.orderId,
+        itemIndex: index,
+        currentItem: item,
+        onItemUpdated: () {
+          setState(() {
+            _order = _orderController.getOrderById(widget.orderId);
+          });
+        },
+      ),
+    );
+  }
 }
 
 // Add Item Dialog Widget
@@ -2199,6 +2333,501 @@ class _AddItemDialogState extends State<_AddItemDialog> {
             ),
           )
               : const Text('Add Item'),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditItemDialog extends StatefulWidget {
+  final String orderId;
+  final int itemIndex;
+  final OrderItem currentItem;
+  final VoidCallback onItemUpdated;
+
+  const _EditItemDialog({
+    required this.orderId,
+    required this.itemIndex,
+    required this.currentItem,
+    required this.onItemUpdated,
+  });
+
+  @override
+  State<_EditItemDialog> createState() => _EditItemDialogState();
+}
+
+class _EditItemDialogState extends State<_EditItemDialog> {
+  final OrderController _orderController = Get.find<OrderController>();
+  final MasterDataController _masterDataController = Get.find<MasterDataController>();
+  final TextEditingController _pcsController = TextEditingController();
+
+  MasterDataModel? _selectedMasterData;
+  bool _isLoading = false;
+  bool _resetDispatchStatus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pcsController.text = widget.currentItem.pcs.toString();
+
+    // Find the current master data
+    try {
+      _selectedMasterData = _masterDataController.masterDataList.firstWhere(
+            (data) => data.id == widget.currentItem.masterDataId,
+      );
+    } catch (e) {
+      print('Could not find master data: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pcsController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateItem() async {
+    if (_selectedMasterData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select master data'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    final pcs = int.tryParse(_pcsController.text.trim());
+    if (pcs == null || pcs <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter valid number of pieces'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // Validation: Cannot make total pcs lower than dispatched pieces (unless resetting)
+    if (!_resetDispatchStatus && pcs < widget.currentItem.dispatchedPcs) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Total pieces ($pcs) cannot be lower than dispatched pieces (${widget.currentItem.dispatchedPcs}). '
+                'Please check "Reset Dispatch Status" to reset dispatched pieces.',
+          ),
+          backgroundColor: AppTheme.errorColor,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // Create updated item
+    final updatedItem = widget.currentItem.copyWith(
+      pcs: pcs,
+      masterDataId: _selectedMasterData!.id!,
+      designNo: _selectedMasterData!.designNo,
+      fileName: _selectedMasterData!.fileName,
+      jaluNo: _selectedMasterData!.jaluNo,
+      qualityName: _masterDataController.getQualityName(
+        _selectedMasterData!.qualityId,
+        _selectedMasterData!.qualityName,
+      ),
+      dispatchedPcs: _resetDispatchStatus ? 0 : null,
+      dispatchDate: _resetDispatchStatus ? () => null : null, // Use function wrapper to set null
+      deliveryStatus: _resetDispatchStatus ? 'awaiting_dispatch' : null,
+      updatedAt: DateTime.now(),
+    );
+
+    final success = await _orderController.updateOrderItem(
+      widget.orderId,
+      widget.itemIndex,
+      updatedItem,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (success && mounted) {
+      widget.onItemUpdated();
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item updated successfully!'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_orderController.errorMessage.value),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return AlertDialog(
+      backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.white,
+      title: Text(
+        'Edit Item',
+        style: TextStyle(
+          color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+        ),
+      ),
+      content: SizedBox(
+        width: 400,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Current item info banner
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.accentColor.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: AppTheme.accentColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Current Item Info',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Total Pieces: ${widget.currentItem.pcs}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                    Text(
+                      'Dispatched: ${widget.currentItem.dispatchedPcs}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                    Text(
+                      'Remaining: ${widget.currentItem.remainingPcs}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Master Data Selection
+              Text(
+                'Select Master Data',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Obx(() {
+                final masterDataList = _masterDataController.masterDataList;
+
+                if (masterDataList.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: themeProvider.isDarkMode
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.black.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: themeProvider.isDarkMode
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.black.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, color: AppTheme.warningColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'No master data available',
+                            style: TextStyle(
+                              color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return GestureDetector(
+                  onTap: () async {
+                    final selectedData = await showMasterDataSearchDialog(
+                      context,
+                      title: 'Select Master Data for Item',
+                    );
+                    if (selectedData != null) {
+                      setState(() {
+                        _selectedMasterData = selectedData;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: themeProvider.isDarkMode
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.black.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: themeProvider.isDarkMode
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.black.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search_rounded,
+                          color: themeProvider.isDarkMode ? Colors.white54 : Colors.black54,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedMasterData != null
+                                ? '${_selectedMasterData!.designNo} - ${_selectedMasterData!.fileName}'
+                                : 'Search and select master data',
+                            style: TextStyle(
+                              color: _selectedMasterData != null
+                                  ? (themeProvider.isDarkMode ? Colors.white : Colors.black87)
+                                  : (themeProvider.isDarkMode ? Colors.white38 : Colors.black38),
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          color: themeProvider.isDarkMode ? Colors.white54 : Colors.black54,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+              if (_selectedMasterData != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.layers_rounded, size: 16, color: AppTheme.primaryColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Selected Master Data',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Design: ${_selectedMasterData!.designNo}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      Text(
+                        'File: ${_selectedMasterData!.fileName}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      Text(
+                        'Jalu: ${_selectedMasterData!.jaluNo} • Quality: ${_masterDataController.getQualityName(_selectedMasterData!.qualityId, _selectedMasterData!.qualityName)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 16),
+
+              // Total Pieces Input
+              TextField(
+                controller: _pcsController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: TextStyle(
+                  color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Total Pieces',
+                  hintText: 'Enter number of pieces',
+                  prefixIcon: Icon(
+                    Icons.numbers_rounded,
+                    color: themeProvider.isDarkMode ? Colors.white54 : Colors.black54,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Reset Dispatch Status Checkbox
+              Container(
+                decoration: BoxDecoration(
+                  color: _resetDispatchStatus
+                      ? AppTheme.warningColor.withOpacity(0.1)
+                      : (themeProvider.isDarkMode
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.03)),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _resetDispatchStatus
+                        ? AppTheme.warningColor.withOpacity(0.3)
+                        : (themeProvider.isDarkMode
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.1)),
+                  ),
+                ),
+                child: CheckboxListTile(
+                  value: _resetDispatchStatus,
+                  onChanged: (value) {
+                    setState(() {
+                      _resetDispatchStatus = value ?? false;
+                    });
+                  },
+                  title: Text(
+                    'Reset Dispatch Status',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'This will reset dispatched pieces to 0 and clear dispatch date',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: themeProvider.isDarkMode ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                  activeColor: AppTheme.warningColor,
+                  checkColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+
+              if (_resetDispatchStatus) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.warningColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 20,
+                        color: AppTheme.warningColor,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Warning: This will clear ${widget.currentItem.dispatchedPcs} dispatched pieces',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: themeProvider.isDarkMode ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _updateItem,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+          ),
+          child: _isLoading
+              ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          )
+              : const Text('Update Item'),
         ),
       ],
     );

@@ -273,8 +273,8 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildStatCard(
-                    'Total Pieces',
-                    totalPcs.toString(),
+                    'Pending Pcs',
+                    remainingPcs.toString(),
                     Icons.inventory_2_rounded,
                     AppTheme.accentColor,
                     themeProvider,
@@ -435,6 +435,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
                     height: 1.0,
                   ),
                   maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -493,6 +494,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
                   fontWeight: FontWeight.w700,
                   color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
                   height: 1.0,
+                  overflow: TextOverflow.ellipsis
                 ),
                 maxLines: 1,
               ),
@@ -684,7 +686,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
                         ),
                         DataColumn(
                           label: Text(
-                            'Created',
+                            'Order Date',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: themeProvider.isDarkMode
@@ -770,7 +772,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
                                   Expanded(
                                     child: Text(
                                       DateFormat('MMM dd, yyyy')
-                                          .format(order.createdAt),
+                                          .format(order.orderDate),
                                       style: TextStyle(
                                         color: themeProvider.isDarkMode
                                             ? Colors.white70

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/controllers/auth_controller.dart';
 import '../../../../core/controllers/master_data_controller.dart';
@@ -26,6 +27,9 @@ class _AddOrderPageState extends State<AddOrderPage> {
   final _notesController = TextEditingController();
 
   final List<OrderItemInput> _orderItems = [];
+
+  // NEW: Order date field
+  DateTime _selectedOrderDate = DateTime.now();
 
   bool _validationActivated = false;
   final OrderController _orderController = Get.find<OrderController>();
@@ -60,6 +64,36 @@ class _AddOrderPageState extends State<AddOrderPage> {
       setState(() {
         _orderItems[index].dispose();
         _orderItems.removeAt(index);
+      });
+    }
+  }
+
+  // NEW: Show date picker
+  Future<void> _selectOrderDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedOrderDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primaryColor,
+              onPrimary: Colors.white,
+              surface: themeProvider.isDarkMode ? Colors.grey[900]! : Colors.white,
+              onSurface: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedOrderDate) {
+      setState(() {
+        _selectedOrderDate = picked;
       });
     }
   }
@@ -117,6 +151,7 @@ class _AddOrderPageState extends State<AddOrderPage> {
       notes: _notesController.text.trim().isNotEmpty
           ? _notesController.text.trim()
           : null,
+      orderDate: _selectedOrderDate, // NEW: Add order date
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -261,6 +296,10 @@ class _AddOrderPageState extends State<AddOrderPage> {
             ),
             const SizedBox(height: 24),
 
+            // NEW: Order Date Picker
+            _buildDatePicker(themeProvider),
+            const SizedBox(height: 24),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -308,6 +347,64 @@ class _AddOrderPageState extends State<AddOrderPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // NEW: Date Picker Widget
+  Widget _buildDatePicker(ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Order Date',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: _selectOrderDate,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: themeProvider.isDarkMode
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.black.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: themeProvider.isDarkMode
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.black.withOpacity(0.1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_rounded,
+                  color: themeProvider.isDarkMode ? Colors.white54 : Colors.black54,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    DateFormat('MMM dd, yyyy').format(_selectedOrderDate),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_drop_down_rounded,
+                  color: themeProvider.isDarkMode ? Colors.white54 : Colors.black54,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

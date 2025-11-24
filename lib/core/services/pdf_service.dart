@@ -54,12 +54,12 @@ class PdfService {
               ),
               pw.SizedBox(height: 20),
 
-              // Party Name, Order ID, and Date row
+              // Party Name and Order Date row
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Left: Party Name and Order ID
+                  // Left: Party Name only
                   pw.Expanded(
                     flex: 2,
                     child: pw.Column(
@@ -73,26 +73,17 @@ class PdfService {
                             color: primaryColor,
                           ),
                         ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'Order ID: ${order.id ?? 'N/A'}',
-                          style: pw.TextStyle(
-                            font: ttf,
-                            fontSize: 11,
-                            color: primaryColor,
-                          ),
-                        ),
                       ],
                     ),
                   ),
 
-                  // Right: Date
+                  // Right: Order Date only
                   pw.Expanded(
                     flex: 1,
                     child: pw.Align(
                       alignment: pw.Alignment.centerRight,
                       child: pw.Text(
-                        'Date: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                        'Order Date: ${DateFormat('dd/MM/yyyy').format(order.orderDate)}',
                         style: pw.TextStyle(
                           font: ttf,
                           fontSize: 11,
@@ -139,6 +130,7 @@ class PdfService {
       child: pw.Row(
         children: [
           _buildTableHeaderCell('Design No', 1.5, boldFont, primaryColor),
+          _buildTableHeaderCell('Quality Name', 1.5, boldFont, primaryColor), // NEW COLUMN
           _buildTableHeaderCell('PCS', 1, boldFont, primaryColor),
           _buildTableHeaderCell('Dispatched\nPCS', 1.2, boldFont, primaryColor),
           _buildTableHeaderCell('Item\nStatus', 1.2, boldFont, primaryColor),
@@ -188,6 +180,7 @@ class PdfService {
         child: pw.Row(
           children: [
             _buildTableCell(item.designNo, 1.5, regularFont),
+            _buildTableCell(item.qualityName, 1.5, regularFont), // NEW COLUMN DATA
             _buildTableCell(item.pcs.toString(), 1, regularFont),
             _buildTableCell(item.dispatchedPcs.toString(), 1.2, regularFont),
             _buildTableCell(

@@ -165,7 +165,7 @@ class OrderController extends GetxController {
       items[itemIndex] = item.copyWith(
         deliveryStatus: 'dispatched',
         dispatchedPcs: item.dispatchedPcs + dispatchedPcs,
-        dispatchDate: DateTime.now(),
+        dispatchDate: () => DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
@@ -257,12 +257,13 @@ class OrderController extends GetxController {
 
   int get pendingPieces {
     return orders.fold(0, (sum, order) {
-      return sum +
-          order.items
-              .where((item) => item.itemStatus == 'pending')
-              .fold(0, (itemSum, item) => itemSum + item.pcs);
+      return sum + order.items.fold(
+        0,
+            (itemSum, item) => itemSum + (item.pcs - item.dispatchedPcs),
+      );
     });
   }
+
 
   int get finishingPieces {
     return orders.fold(0, (sum, order) {

@@ -4,19 +4,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // Order Item Model
 class OrderItem {
   final String? id;
-  final int pcs; // Pieces to make
-  final String masterDataId; // Reference to master data
-  // Backup fields in case master data is deleted
+  final int pcs;
+  final String masterDataId;
   final String designNo;
   final String fileName;
   final int jaluNo;
   final String qualityName;
-
-  // Status fields
-  final String itemStatus; // 'pending' or 'finishing'
-  final String deliveryStatus; // 'awaiting_dispatch' or 'dispatched'
-  final int dispatchedPcs; // Number of pieces dispatched
-  final DateTime? dispatchDate; // When dispatched
+  final String itemStatus;
+  final String deliveryStatus;
+  final int dispatchedPcs;
+  final DateTime? dispatchDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -71,7 +68,6 @@ class OrderItem {
       updatedAt: DateTime.parse(map['updatedAt']),
     );
   }
-
   OrderItem copyWith({
     String? id,
     int? pcs,
@@ -83,7 +79,7 @@ class OrderItem {
     String? itemStatus,
     String? deliveryStatus,
     int? dispatchedPcs,
-    DateTime? dispatchDate,
+    DateTime? Function()? dispatchDate, // Changed to function wrapper
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -98,7 +94,7 @@ class OrderItem {
       itemStatus: itemStatus ?? this.itemStatus,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,
       dispatchedPcs: dispatchedPcs ?? this.dispatchedPcs,
-      dispatchDate: dispatchDate ?? this.dispatchDate,
+      dispatchDate: dispatchDate != null ? dispatchDate() : this.dispatchDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -122,6 +118,7 @@ class OrderModel {
   final String partyName;
   final List<OrderItem> items;
   final String? notes;
+  final DateTime orderDate; // NEW: User-selectable order date
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -131,6 +128,7 @@ class OrderModel {
     required this.partyName,
     required this.items,
     this.notes,
+    required this.orderDate, // NEW
     required this.createdAt,
     required this.updatedAt,
   });
@@ -142,6 +140,7 @@ class OrderModel {
       'partyName': partyName,
       'items': items.map((item) => item.toMap()).toList(),
       'notes': notes,
+      'orderDate': orderDate.toIso8601String(), // NEW
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -149,6 +148,14 @@ class OrderModel {
 
   // Create from Firebase document
   factory OrderModel.fromMap(Map<String, dynamic> map, String id) {
+    // For backward compatibility: use createdAt if orderDate doesn't exist
+    DateTime orderDate;
+    if (map['orderDate'] != null) {
+      orderDate = DateTime.parse(map['orderDate']);
+    } else {
+      orderDate = DateTime.parse(map['createdAt']);
+    }
+
     return OrderModel(
       id: id,
       userId: map['userId'] ?? '',
@@ -158,6 +165,7 @@ class OrderModel {
           .toList() ??
           [],
       notes: map['notes'],
+      orderDate: orderDate, // NEW
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );
@@ -170,6 +178,7 @@ class OrderModel {
     String? partyName,
     List<OrderItem>? items,
     String? notes,
+    DateTime? orderDate, // NEW
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -179,6 +188,7 @@ class OrderModel {
       partyName: partyName ?? this.partyName,
       items: items ?? this.items,
       notes: notes ?? this.notes,
+      orderDate: orderDate ?? this.orderDate, // NEW
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

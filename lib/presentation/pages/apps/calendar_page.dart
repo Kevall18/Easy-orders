@@ -268,55 +268,343 @@ class _CalendarPageState extends State<CalendarPage> with AutomaticKeepAliveClie
       final ordersCount = _calendarController.selectedDateTotalOrders;
       final itemsCount = _calendarController.selectedDateTotalItems;
 
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+      // Add monthly statistics
+      final programDays = _calendarController.monthlyProgramData;
+      final dispatchedPcs = _calendarController.monthlyDispatchedPieces;
+      final remainingPcs = _calendarController.monthlyRemainingPieces;
+      final totalPcs = _calendarController.monthlyTotalPieces;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Original date info row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  Icons.event_rounded,
-                  size: isMobile ? 14 : 16,
-                  color: AppTheme.primaryColor,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.event_rounded,
+                      size: isMobile ? 14 : 16,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_selectedDay.year}-${_two(_selectedDay.month)}-${_two(_selectedDay.day)}',
+                      style: AppTheme.customTextStyle(
+                        color: textColor,
+                        fontSize: isMobile ? 11 : 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '${_selectedDay.year}-${_two(_selectedDay.month)}-${_two(_selectedDay.day)}',
-                  style: AppTheme.customTextStyle(
-                    color: textColor,
-                    fontSize: isMobile ? 11 : 12,
-                    fontWeight: FontWeight.w600,
+                if (ordersCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$ordersCount ${ordersCount == 1 ? 'order' : 'orders'} • $itemsCount ${itemsCount == 1 ? 'item' : 'items'}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 10 : 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Monthly statistics section
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.black.withOpacity(0.02),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.black.withOpacity(0.08),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_month_rounded,
+                      size: isMobile ? 14 : 16,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${_monthName(_focusedMonth.month)} ${_focusedMonth.year} Overview',
+                        style: AppTheme.customTextStyle(
+                          color: textColor,
+                          fontSize: isMobile ? 12 : 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Responsive statistics layout
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isVerySmall = constraints.maxWidth < 200;
+                    final useHorizontalLayout = constraints.maxWidth > 300 && !isMobile;
+
+                    if (useHorizontalLayout) {
+                      // Horizontal layout for wider screens
+                      return _buildHorizontalStats(
+                          programDays, dispatchedPcs, remainingPcs, totalPcs,
+                          isDark, isMobile, textColor
+                      );
+                    } else {
+                      // Grid layout for smaller screens
+                      return _buildGridStats(
+                        programDays, dispatchedPcs, remainingPcs, totalPcs,
+                        isDark, isMobile, textColor,
+                        crossAxisCount: isVerySmall ? 2 : 2,
+                      );
+                    }
+                  },
                 ),
               ],
             ),
-            if (ordersCount > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$ordersCount ${ordersCount == 1 ? 'order' : 'orders'} • $itemsCount ${itemsCount == 1 ? 'item' : 'items'}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isMobile ? 10 : 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-          ],
-        ),
+          ),
+        ],
       );
     });
   }
 
+// Horizontal layout for wider screens
+  Widget _buildHorizontalStats(
+      double programDays,
+      int dispatchedPcs,
+      int remainingPcs,
+      int totalPcs,
+      bool isDark,
+      bool isMobile,
+      Color textColor,
+      ) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildCompactStatItem(
+            'Program Days',
+            '$programDays',
+            Icons.calendar_today_rounded,
+            Colors.blue,
+            isDark,
+            isMobile,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildCompactStatItem(
+            'Dispatched',
+            '$dispatchedPcs',
+            Icons.local_shipping_rounded,
+            Colors.green,
+            isDark,
+            isMobile,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildCompactStatItem(
+            'Remaining',
+            '$remainingPcs',
+            Icons.pending_actions_rounded,
+            Colors.orange,
+            isDark,
+            isMobile,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildCompactStatItem(
+            'Total PCs',
+            '$totalPcs',
+            Icons.inventory_2_rounded,
+            AppTheme.primaryColor,
+            isDark,
+            isMobile,
+          ),
+        ),
+      ],
+    );
+  }
+
+// Grid layout for smaller screens
+  Widget _buildGridStats(
+      double programDays,
+      int dispatchedPcs,
+      int remainingPcs,
+      int totalPcs,
+      bool isDark,
+      bool isMobile,
+      Color textColor,
+      {required int crossAxisCount}
+      ) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 8,
+      childAspectRatio: _getChildAspectRatio(isMobile, crossAxisCount),
+      children: [
+        _buildCompactStatItem(
+          'Program Days',
+          '$programDays',
+          Icons.calendar_today_rounded,
+          Colors.blue,
+          isDark,
+          isMobile,
+        ),
+        _buildCompactStatItem(
+          'Dispatched',
+          '$dispatchedPcs',
+          Icons.local_shipping_rounded,
+          Colors.green,
+          isDark,
+          isMobile,
+        ),
+        _buildCompactStatItem(
+          'Remaining',
+          '$remainingPcs',
+          Icons.pending_actions_rounded,
+          Colors.orange,
+          isDark,
+          isMobile,
+        ),
+        _buildCompactStatItem(
+          'Total PCs',
+          '$totalPcs',
+          Icons.inventory_2_rounded,
+          AppTheme.primaryColor,
+          isDark,
+          isMobile,
+        ),
+      ],
+    );
+  }
+
+// Calculate appropriate aspect ratio based on screen size
+  double _getChildAspectRatio(bool isMobile, int crossAxisCount) {
+    if (crossAxisCount == 1) return 4.0;
+    if (isMobile) return 2.2;
+    return 2.5;
+  }
+
+// Compact stat item that prevents overflow
+  Widget _buildCompactStatItem(
+      String title,
+      String value,
+      IconData icon,
+      Color color,
+      bool isDark,
+      bool isMobile,
+      ) {
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 6 : 8),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.03)
+            : Colors.black.withOpacity(0.01),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.black.withOpacity(0.05),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon and title row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  icon,
+                  size: isMobile ? 12 : 14,
+                  color: color,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  _getShortTitle(title),
+                  style: TextStyle(
+                    color: isDark ? Colors.white60 : Colors.black54,
+                    fontSize: isMobile ? 9 : 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          // Value
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: isMobile ? 12 : 14,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+// Helper to shorten titles for small screens
+  String _getShortTitle(String title) {
+    if (title == 'Program Days') return 'Program';
+    if (title == 'Dispatched') return 'Dispatched';
+    if (title == 'Remaining') return 'Remaining';
+    if (title == 'Total PCs') return 'Total';
+    return title;
+  }
   Widget _buildHeader(bool isDark, bool isMobile) {
     final monthName = _monthName(_focusedMonth.month);
     final textStyle = AppTheme.customTextStyle(
@@ -711,6 +999,10 @@ class _CalendarPageState extends State<CalendarPage> with AutomaticKeepAliveClie
         ? Colors.orange
         : Colors.blue;
 
+    // Check if any items have been dispatched
+    final hasDispatchedItems = order.items.any((item) => item.dispatchDate != null);
+    final dispatchedItems = order.items.where((item) => item.dispatchDate != null).toList();
+
     return Container(
       decoration: BoxDecoration(
         color: isDark
@@ -769,7 +1061,7 @@ class _CalendarPageState extends State<CalendarPage> with AutomaticKeepAliveClie
                           color: isDark ? Colors.white60 : Colors.black54,
                           fontSize: isMobile ? 11 : 12,
                         ),
-                      ),
+                      )
                     ],
                   ),
                 ),
@@ -828,57 +1120,73 @@ class _CalendarPageState extends State<CalendarPage> with AutomaticKeepAliveClie
         ? Colors.orange
         : Colors.blue;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: isMobile ? 6 : 8,
-          height: isMobile ? 6 : 8,
-          decoration: BoxDecoration(
-            color: itemStatusColor,
-            shape: BoxShape.circle,
-          ),
-        ),
-        SizedBox(width: isMobile ? 8 : 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${item.designNo} - ${item.fileName}',
-                style: AppTheme.customTextStyle(
-                  color: textColor,
-                  fontSize: isMobile ? 12 : 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Jalu: ${item.jaluNo} • ${item.qualityName}',
-                style: TextStyle(
-                  color: isDark ? Colors.white60 : Colors.black54,
-                  fontSize: isMobile ? 10 : 11,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        Row(
           children: [
-            Text(
-              '${item.dispatchedPcs}/${item.pcs}',
-              style: TextStyle(
+            Container(
+              width: isMobile ? 6 : 8,
+              height: isMobile ? 6 : 8,
+              decoration: BoxDecoration(
                 color: itemStatusColor,
-                fontSize: isMobile ? 12 : 13,
-                fontWeight: FontWeight.w700,
+                shape: BoxShape.circle,
               ),
             ),
-            Text(
-              item.deliveryStatusDisplay,
-              style: TextStyle(
-                color: isDark ? Colors.white60 : Colors.black54,
-                fontSize: isMobile ? 9 : 10,
+            SizedBox(width: isMobile ? 8 : 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${item.designNo} - ${item.fileName}',
+                    style: AppTheme.customTextStyle(
+                      color: textColor,
+                      fontSize: isMobile ? 12 : 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Jalu: ${item.jaluNo} • ${item.qualityName}',
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.black54,
+                      fontSize: isMobile ? 10 : 11,
+                    ),
+                  ),
+                  if (item.dispatchDate != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Dispatched: ${_formatDate(item.dispatchDate!)}',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: isMobile ? 9 : 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
               ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${item.dispatchedPcs}/${item.pcs}',
+                  style: TextStyle(
+                    color: itemStatusColor,
+                    fontSize: isMobile ? 12 : 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  item.deliveryStatusDisplay,
+                  style: TextStyle(
+                    color: isDark ? Colors.white60 : Colors.black54,
+                    fontSize: isMobile ? 9 : 10,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -886,6 +1194,9 @@ class _CalendarPageState extends State<CalendarPage> with AutomaticKeepAliveClie
     );
   }
 
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
   void _changeMonth(int delta) {
     final m = DateTime(_focusedMonth.year, _focusedMonth.month + delta, 1);
     setState(() {
@@ -896,6 +1207,7 @@ class _CalendarPageState extends State<CalendarPage> with AutomaticKeepAliveClie
       _selectedDay = newSelectedDay;
     });
     _calendarController.selectDate(_selectedDay);
+    _calendarController.setFocusedMonth(m); // Add this line
   }
 
   void _goToToday() {
@@ -903,6 +1215,7 @@ class _CalendarPageState extends State<CalendarPage> with AutomaticKeepAliveClie
     _focusedMonth = DateTime(now.year, now.month, 1);
     _selectedDay = DateUtils.dateOnly(now);
     _calendarController.selectDate(_selectedDay);
+    _calendarController.setFocusedMonth(_focusedMonth); // Add this line
     setState(() {});
   }
 

@@ -2,6 +2,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../models/order_model.dart';
+import 'auth_controller.dart';
 import 'order_controller.dart';
 
 enum DayStatus {
@@ -42,7 +43,7 @@ class CalendarOrderController extends GetxController {
 
     for (var order in _orderController.orders) {
       // Group by creation date (using createdAt, adjust if deliveryDate is required)
-      final dateKey = _normalizeDate(order.createdAt);
+      final dateKey = _normalizeDate(order.orderDate);
 
       if (!ordersByDate.containsKey(dateKey)) {
         ordersByDate[dateKey] = [];
@@ -208,5 +209,73 @@ class CalendarOrderController extends GetxController {
 
       return partyMatch || itemMatch;
     }).toList();
+  }
+
+  // Add these getters to your CalendarOrderController
+
+// Get monthly statistics for the currently focused month
+  int get monthlyTotalPieces {
+    return _getMonthlyOrders().fold(
+      0,
+          (sum, order) => sum + order.totalPcs,
+    );
+  }
+
+  int get monthlyDispatchedPieces {
+    return _getMonthlyOrders().fold(
+      0,
+          (sum, order) => sum + order.totalDispatchedPcs,
+    );
+  }
+
+  int get monthlyRemainingPieces {
+    return _getMonthlyOrders().fold(
+      0,
+          (sum, order) => sum + order.totalRemainingPcs,
+    );
+  }
+
+// Update the monthlyProgramDays getter in CalendarOrderController
+  double get monthlyProgramData {
+    final monthlyOrders = _getMonthlyOrders();
+    if (monthlyOrders.isEmpty) return 0.0;
+
+    // Get total remaining pieces for the month
+    final remainingPieces = monthlyOrders.fold(0, (sum, order) {
+      return sum + order.items.fold(
+        0,
+            (itemSum, item) => itemSum + item.remainingPcs,
+      );
+    });
+
+    // Get program days from auth controller
+    final AuthController authController = Get.find<AuthController>();
+    final programDays = authController.firestoreUser.value?.programDays ?? 0;
+
+    if (programDays <= 0) return 0.0;
+
+    // Calculate program data (days of work left)
+    return remainingPieces / programDays;
+  }
+
+
+
+// Helper method to get orders for the current focused month
+  List<OrderModel> _getMonthlyOrders() {
+    return _orderController.orders.where((order) {
+      final orderDate = _normalizeDate(order.orderDate);
+      return orderDate.year == _focusedMonth.value.year &&
+          orderDate.month == _focusedMonth.value.month;
+    }).toList();
+  }
+
+// Add this to your controller class
+  final Rx<DateTime> _focusedMonth = DateTime.now().obs;
+
+  DateTime get focusedMonth => _focusedMonth.value;
+
+  void setFocusedMonth(DateTime month) {
+    _focusedMonth.value = DateTime(month.year, month.month, 1);
+    update();
   }
 }
