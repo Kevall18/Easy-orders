@@ -1,6 +1,7 @@
 // lib/core/providers/sidebar_provider.dart
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 enum SidebarState {
@@ -17,7 +18,7 @@ class SidebarProvider extends ChangeNotifier {
   SidebarState _sidebarState = SidebarState.expanded;
   bool _isMobile = false;
 
-  String _activeRoute = '/analytics';
+  String _activeRoute = '';
 
   // --- Getters ---
   SidebarState get sidebarState => _sidebarState;
@@ -30,6 +31,15 @@ class SidebarProvider extends ChangeNotifier {
 
   // --- Constructor ---
   SidebarProvider() {
+    // 1. Initialize _activeRoute with the current route before Hive initialization
+    // Get.currentRoute will hold the route the app was launched on.
+    _activeRoute = Get.currentRoute;
+
+    // 2. Process the initial route immediately
+    // Call setActiveRoute to correctly map detail/add pages to their parents
+    setActiveRoute(_activeRoute);
+
+    // 3. Continue with existing Hive initialization
     _initHive();
   }
 
