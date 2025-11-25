@@ -31,8 +31,22 @@ class CalendarOrderController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Listen to order changes
+
+    // 1. Check if orders are empty and fetch them if needed
+    // This handles the case where CalendarOrderController is initialized
+    // before the OrderController has finished its initial fetch.
+    if (_orderController.orders.isEmpty) {
+      // Use await to ensure data is fetched before proceeding,
+      // though GetX will handle reactivity via ever() regardless.
+      // We don't await here as onInit should be fast, and the ever listener handles the update.
+      _orderController.fetchOrders();
+    }
+
+    // 2. Listen to order changes
+    // This will trigger _processOrders() whenever the orders list changes (including after the fetch).
     ever(_orderController.orders, (_) => _processOrders());
+
+    // Initial processing (in case orders were already loaded before onInit)
     _processOrders();
   }
 
